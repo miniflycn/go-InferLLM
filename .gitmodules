@@ -1,0 +1,3 @@
+[submodule "InferLLM"]
+	path = InferLLM
+	url = https://github.com/MegEngine/InferLLM
