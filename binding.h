@@ -6,6 +6,7 @@ extern "C" {
 
 #include <stdbool.h>
 void* load_model(const char *fname);
+void llm_binding_free_model(void *state_ptr);
 #ifdef __cplusplus
 }
 

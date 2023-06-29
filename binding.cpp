@@ -40,6 +40,23 @@ struct app_params {
     std::string mtype = "chatglm";  // the model type name, llama
 };
 
+void llm_binding_free_model(void *state_ptr) {
+    inferllm::Model* model = reinterpret_cast<inferllm::Model*>(state_ptr);
+    int a = model->get_remain_token();
+    fprintf(stderr, "a == %s\n", a);
+
+    // inferllm::Model* model = (inferllm::Model*) state_ptr;
+    // try {
+    //     fprintf(stderr, "ptr == %s\n", state_ptr);
+    //     fprintf(stderr, "ctx == %s\n", model);
+    //     model->get_remain_token();
+    // } catch (std::runtime_error& e) {
+    //     fprintf(stderr, "failed %s",e.what());
+    // }
+    // printf("{}", ctx);
+    // delete &ctx;
+}
+
 void* load_model(const char *fname) {
     app_params params;
     params.model = fname;
@@ -56,18 +73,20 @@ void* load_model(const char *fname) {
     config.enable_mmap = params.use_mmap;
     config.nr_ctx = params.n_ctx;
 
-    std::shared_ptr<inferllm::Model> model =
-            std::make_shared<inferllm::Model>(config, params.mtype);
-    model->load(params.model);
-    model->init(
-            params.top_k, params.top_p, params.temp, params.repeat_penalty,
-            params.repeat_last_n, params.seed, 130005);
+    void* res = nullptr;
 
-    fprintf(stderr,
-            "== 运行模型中. ==\n"
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(_WIN32)
-            " - 输入 Ctrl+C 将在退出程序.\n"
-#endif
-            " - 如果你想换行，请在行末输入'\\'符号.\n");
-    return 0;
+    try {
+        std::shared_ptr<inferllm::Model> model =
+            std::make_shared<inferllm::Model>(config, params.mtype);
+        model->load(params.model);
+        model->init(
+                params.top_k, params.top_p, params.temp, params.repeat_penalty,
+                params.repeat_last_n, params.seed, 130005);
+        res = model.get();
+    } catch (std::runtime_error& e) {
+        fprintf(stderr, "failed %s",e.what());
+        return res;
+    }
+
+    return res;
 }
