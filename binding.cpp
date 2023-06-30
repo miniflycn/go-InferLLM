@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include<iostream>
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <signal.h>
@@ -41,9 +42,19 @@ struct app_params {
 };
 
 void llm_binding_free_model(void *state_ptr) {
-    inferllm::Model* model = reinterpret_cast<inferllm::Model*>(state_ptr);
-    int a = model->get_remain_token();
-    fprintf(stderr, "a == %s\n", a);
+    fprintf(stderr, "state_ptr= == %d\n", state_ptr);
+    // inferllm::Model* __model = reinterpret_cast<inferllm::Model*>(state_ptr);
+    // std::shared_ptr<inferllm::Model> model;
+    // model.reset(__model);
+    // fprintf(stderr, "model= == %c\n", model);
+    // int a = model->get_remain_token();
+    // fprintf(stderr, "a === %d\n", a);
+    // try {
+    //     inferllm::Model* model = reinterpret_cast<inferllm::Model*>(state_ptr);
+    //     int a = model->get_remain_token();
+    // } catch(std::runtime_error& e) {
+    //     fprintf(stderr, "failed %s",e.what());
+    // }
 
     // inferllm::Model* model = (inferllm::Model*) state_ptr;
     // try {
@@ -87,6 +98,13 @@ void* load_model(const char *fname) {
         fprintf(stderr, "failed %s",e.what());
         return res;
     }
+
+    // 打印model
+
+    inferllm::Model *m = (inferllm::Model*) res;
+    m->get_remain_token();
+
+    fprintf(stderr, "res= == %d\n", res);
 
     return res;
 }
