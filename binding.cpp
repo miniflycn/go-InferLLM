@@ -8,7 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include<iostream>
+#include <iostream>
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <signal.h>
@@ -19,6 +19,9 @@
 #endif
 
 #include "InferLLM/include/model.h"
+
+// int count = 0;
+static std::map<void*, std::shared_ptr<inferllm::Model>> model_map;
 
 struct app_params {
     int32_t seed = -1;  // RNG seed
@@ -41,32 +44,104 @@ struct app_params {
     std::string mtype = "chatglm";  // the model type name, llama
 };
 
-void llm_binding_free_model(void *state_ptr) {
-    fprintf(stderr, "state_ptr= == %d\n", state_ptr);
-    // inferllm::Model* __model = reinterpret_cast<inferllm::Model*>(state_ptr);
-    // std::shared_ptr<inferllm::Model> model;
-    // model.reset(__model);
-    // fprintf(stderr, "model= == %c\n", model);
-    // int a = model->get_remain_token();
-    // fprintf(stderr, "a === %d\n", a);
-    // try {
-    //     inferllm::Model* model = reinterpret_cast<inferllm::Model*>(state_ptr);
-    //     int a = model->get_remain_token();
-    // } catch(std::runtime_error& e) {
-    //     fprintf(stderr, "failed %s",e.what());
-    // }
-
-    // inferllm::Model* model = (inferllm::Model*) state_ptr;
-    // try {
-    //     fprintf(stderr, "ptr == %s\n", state_ptr);
-    //     fprintf(stderr, "ctx == %s\n", model);
-    //     model->get_remain_token();
-    // } catch (std::runtime_error& e) {
-    //     fprintf(stderr, "failed %s",e.what());
-    // }
-    // printf("{}", ctx);
-    // delete &ctx;
+std::shared_ptr<inferllm::Model> find_model(void *state_ptr) {
+    std::map<void *, std::shared_ptr<inferllm::Model>>::iterator it = model_map.find(state_ptr);
+    if (it != model_map.end()) {
+        return it->second;
+    } else {
+        throw "没有找到该模型\n";
+    }
 }
+
+void llm_binding_free_model(void *state_ptr) {
+    std::map<void *, std::shared_ptr<inferllm::Model>>::iterator it = model_map.find(state_ptr);
+    if (it != model_map.end()) {
+        fprintf(stderr, "成功清理指针\n");
+        model_map.erase(it);
+    } else {
+        fprintf(stderr, "清理指针失败\n");
+    }
+}
+
+auto fix_word = [](std::string& word) {
+    auto ret = word;
+    if (word == "<n>" || word == "<n><n>")
+        word = "\n";
+    if (word == "<|tab|>")
+        word = "\t";
+    int pos = word.find("<|blank_");
+    if (pos != -1) {
+        int space_num = atoi(word.substr(8, word.size() - 10).c_str());
+        word = std::string(space_num, ' ');
+    }
+    pos = word.find("▁");
+    if (pos != -1) {
+        word.replace(pos, pos + 3, " ");
+    }
+    // Fix utf-8 garbled characters
+    if (word.length() == 6 && word[0] == '<' && word[word.length() - 1] == '>' &&
+        word[1] == '0' && word[2] == 'x') {
+        int num = std::stoi(word.substr(3, 2), nullptr, 16);
+        word = static_cast<char>(num);
+    }
+};
+
+char *ask_sync(void *state_ptr, const char *user_input) {
+    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    std::string output;
+    while (model->get_remain_token() > 0) {
+        if (output.empty()) {
+            int token;
+            output = model->decode(user_input, token);
+            fix_word(output);
+        } else {
+            int token;
+            auto o = model->decode_iter(token);
+            fix_word(o);
+            output += o;
+            if (token == 130005) {
+                printf("\n");
+                break;
+                // running_summary = model->decode_summary();
+            }
+        }
+    }
+    char *c = (char*) malloc(output.length());
+    strcpy(c, output.c_str());
+    return c;
+}
+
+char *ask(void *state_ptr, const char *user_input) {
+    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    std::string output;
+    if (model->get_remain_token() > 0) {
+        int token;
+        output = model->decode(user_input, token);
+        fix_word(output);
+    }
+    char *c = (char*) malloc(output.length());
+    strcpy(c, output.c_str());
+    return c;
+}
+
+char *get_continue(void *state_ptr) {
+    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    std::string output;
+    if (model->get_remain_token() > 0) {
+        int token;
+        auto o = model->decode_iter(token);
+        fix_word(o);
+        output += o;
+        if (token == 130005) {
+            output += "\n\u200b";
+            // running_summary = model->decode_summary();
+        }
+    }
+    char *c = (char*) malloc(output.length());
+    strcpy(c, output.c_str());
+    return c;
+}
+
 
 void* load_model(const char *fname) {
     app_params params;
@@ -84,7 +159,10 @@ void* load_model(const char *fname) {
     config.enable_mmap = params.use_mmap;
     config.nr_ctx = params.n_ctx;
 
+    fprintf(stderr, "threads === %d\n", config.nr_thread);
+
     void* res = nullptr;
+    // std::shared_ptr<inferllm::Model> model;
 
     try {
         std::shared_ptr<inferllm::Model> model =
@@ -94,17 +172,12 @@ void* load_model(const char *fname) {
                 params.top_k, params.top_p, params.temp, params.repeat_penalty,
                 params.repeat_last_n, params.seed, 130005);
         res = model.get();
+        // save
+        model_map.insert(std::pair<void*, std::shared_ptr<inferllm::Model>>(res, model));
     } catch (std::runtime_error& e) {
         fprintf(stderr, "failed %s",e.what());
         return res;
     }
-
-    // 打印model
-
-    inferllm::Model *m = (inferllm::Model*) res;
-    m->get_remain_token();
-
-    fprintf(stderr, "res= == %d\n", res);
 
     return res;
 }

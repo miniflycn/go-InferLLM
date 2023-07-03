@@ -7,6 +7,9 @@ extern "C" {
 #include <stdbool.h>
 void* load_model(const char *fname);
 void llm_binding_free_model(void *state_ptr);
+char *ask_sync(void *state_ptr, const char *user_input);
+char *ask(void *state_ptr, const char *user_input);
+char *get_continue(void *state_ptr);
 #ifdef __cplusplus
 }
 
