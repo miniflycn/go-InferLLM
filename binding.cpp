@@ -56,7 +56,7 @@ std::shared_ptr<inferllm::Model> find_model(void *state_ptr) {
 void llm_binding_free_model(void *state_ptr) {
     std::map<void *, std::shared_ptr<inferllm::Model>>::iterator it = model_map.find(state_ptr);
     if (it != model_map.end()) {
-        fprintf(stderr, "成功清理指针\n");
+        // fprintf(stderr, "成功清理指针\n");
         model_map.erase(it);
     } else {
         fprintf(stderr, "清理指针失败\n");

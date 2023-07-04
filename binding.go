@@ -1,4 +1,4 @@
-package main
+package InferLLM
 
 // #cgo CXXFLAGS: -I./build
 // #cgo LDFLAGS: -L./ -lbinding -lm -lstdc++
@@ -8,7 +8,6 @@ package main
 import "C"
 import (
 	"fmt"
-	"os"
 	"unsafe"
 )
 
@@ -43,7 +42,7 @@ func (l *InferLLM) GetContinue() string {
 	return p
 }
 
-func isEnd(s string) bool {
+func IsEnd(s string) bool {
 	if len(s) > 3 {
 		return string(s[len(s)-3:]) == "\u200b"
 	} else {
@@ -51,21 +50,21 @@ func isEnd(s string) bool {
 	}
 }
 
-func main() {
-	l, err := New("../InferLLM-Model/chatglm-q4.bin")
-	if err != nil {
-		fmt.Println("Loading the model failed:", err.Error())
-		os.Exit(1)
-	}
-	p := l.Ask("怎么提高睡眠?")
-	print(p)
-	for {
-		p := l.GetContinue()
-		print(p)
-		if isEnd(p) {
-			break
-		}
-	}
-	// fmt.Println(l.AskSync("你好"))
-	l.Free()
-}
+// func main() {
+// 	l, err := New("../InferLLM-Model/chatglm-q4.bin")
+// 	if err != nil {
+// 		fmt.Println("Loading the model failed:", err.Error())
+// 		os.Exit(1)
+// 	}
+// 	p := l.Ask("怎么提高睡眠?")
+// 	print(p)
+// 	for {
+// 		p := l.GetContinue()
+// 		print(p)
+// 		if isEnd(p) {
+// 			break
+// 		}
+// 	}
+// 	// fmt.Println(l.AskSync("你好"))
+// 	l.Free()
+// }
