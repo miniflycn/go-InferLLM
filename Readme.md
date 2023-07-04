@@ -15,6 +15,8 @@ cd InferLLM-go
 make libbinding.a
 ```
 
+Download chatglm model：https://huggingface.co/kewin4933/InferLLM-Model/blob/main/chatglm-q4.bin
+
 Now you can run the example with:
 
 ```
