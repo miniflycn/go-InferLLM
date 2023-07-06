@@ -104,10 +104,10 @@ binding.o: prepare
 
 prepare:
 	mkdir -p build
-	cd build && cmake ../InferLLM && cmake --build .
+	cd build && cmake ../InferLLM && cmake --build . -j4
 
 libbinding.a: prepare binding.o
-	ar src libbinding.a build/CMakeFiles/InferLLM.dir/src/core/device.cpp.o build/CMakeFiles/InferLLM.dir/src/core/graph.cpp.o build/CMakeFiles/InferLLM.dir/src/core/kvstotage.cpp.o build/CMakeFiles/InferLLM.dir/src/core/model.cpp.o build/CMakeFiles/InferLLM.dir/src/core/model_imp.cpp.o build/CMakeFiles/InferLLM.dir/src/core/op.cpp.o build/CMakeFiles/InferLLM.dir/src/core/tensor.cpp.o build/CMakeFiles/InferLLM.dir/src/core/thread_pool.cpp.o build/CMakeFiles/InferLLM.dir/src/file.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/baichuan.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/chatGLM.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/graph_imp.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/llama.cpp.o build/CMakeFiles/InferLLM.dir/src/kern/naive/naive.cpp.o build/CMakeFiles/InferLLM.dir/src/kern/optimized/kernel_opt.cpp.o build/CMakeFiles/InferLLM.dir/src/utils.cpp.o binding.o
+	ar src libbinding.a build/CMakeFiles/InferLLM.dir/src/core/device.cpp.o build/CMakeFiles/InferLLM.dir/src/core/graph.cpp.o build/CMakeFiles/InferLLM.dir/src/core/kvstotage.cpp.o build/CMakeFiles/InferLLM.dir/src/core/model.cpp.o build/CMakeFiles/InferLLM.dir/src/core/model_imp.cpp.o build/CMakeFiles/InferLLM.dir/src/core/op.cpp.o build/CMakeFiles/InferLLM.dir/src/core/tensor.cpp.o build/CMakeFiles/InferLLM.dir/src/core/thread_pool.cpp.o build/CMakeFiles/InferLLM.dir/src/file.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/baichuan.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/chatGLM.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/chatGLM2.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/graph_imp.cpp.o build/CMakeFiles/InferLLM.dir/src/graph/llama.cpp.o build/CMakeFiles/InferLLM.dir/src/kern/naive/naive.cpp.o build/CMakeFiles/InferLLM.dir/src/kern/optimized/x86/kernel.cpp.o build/CMakeFiles/InferLLM.dir/src/utils.cpp.o binding.o
 
 clean:
 	rm -rf *.o

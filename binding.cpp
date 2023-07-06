@@ -20,8 +20,13 @@
 
 #include "InferLLM/include/model.h"
 
+struct model_info {
+    std::shared_ptr<inferllm::Model> model;
+    int etoken = 130005;
+};
+
 // int count = 0;
-static std::map<void*, std::shared_ptr<inferllm::Model>> model_map;
+static std::map<void*, model_info> model_map;
 
 struct app_params {
     int32_t seed = -1;  // RNG seed
@@ -44,8 +49,8 @@ struct app_params {
     std::string mtype = "chatglm";  // the model type name, llama
 };
 
-std::shared_ptr<inferllm::Model> find_model(void *state_ptr) {
-    std::map<void *, std::shared_ptr<inferllm::Model>>::iterator it = model_map.find(state_ptr);
+model_info find_model(void *state_ptr) {
+    std::map<void *, model_info>::iterator it = model_map.find(state_ptr);
     if (it != model_map.end()) {
         return it->second;
     } else {
@@ -54,9 +59,12 @@ std::shared_ptr<inferllm::Model> find_model(void *state_ptr) {
 }
 
 void llm_binding_free_model(void *state_ptr) {
-    std::map<void *, std::shared_ptr<inferllm::Model>>::iterator it = model_map.find(state_ptr);
+    std::map<void *, model_info>::iterator it = model_map.find(state_ptr);
     if (it != model_map.end()) {
         // fprintf(stderr, "成功清理指针\n");
+        std::string running_summary = it->second.model->decode_summary();
+        fprintf(stderr, "%s", running_summary.c_str());
+        it->second.model = nullptr;
         model_map.erase(it);
     } else {
         fprintf(stderr, "清理指针失败\n");
@@ -87,7 +95,9 @@ auto fix_word = [](std::string& word) {
 };
 
 char *ask_sync(void *state_ptr, const char *user_input) {
-    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    model_info minfo = find_model(state_ptr);
+    std::shared_ptr<inferllm::Model> model = minfo.model;
+    int etoken = minfo.etoken;
     std::string output;
     while (model->get_remain_token() > 0) {
         if (output.empty()) {
@@ -99,7 +109,7 @@ char *ask_sync(void *state_ptr, const char *user_input) {
             auto o = model->decode_iter(token);
             fix_word(o);
             output += o;
-            if (token == 130005) {
+            if (token == etoken) {
                 printf("\n");
                 break;
                 // running_summary = model->decode_summary();
@@ -112,7 +122,8 @@ char *ask_sync(void *state_ptr, const char *user_input) {
 }
 
 char *ask(void *state_ptr, const char *user_input) {
-    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    model_info minfo = find_model(state_ptr);
+    std::shared_ptr<inferllm::Model> model = minfo.model;
     std::string output;
     if (model->get_remain_token() > 0) {
         int token;
@@ -125,14 +136,16 @@ char *ask(void *state_ptr, const char *user_input) {
 }
 
 char *get_continue(void *state_ptr) {
-    std::shared_ptr<inferllm::Model> model = find_model(state_ptr);
+    model_info minfo = find_model(state_ptr);
+    std::shared_ptr<inferllm::Model> model = minfo.model;
+    int etoken = minfo.etoken;
     std::string output;
     if (model->get_remain_token() > 0) {
         int token;
         auto o = model->decode_iter(token);
         fix_word(o);
         output += o;
-        if (token == 130005) {
+        if (token == etoken) {
             output += "\n\u200b";
             // running_summary = model->decode_summary();
         }
@@ -143,9 +156,15 @@ char *get_continue(void *state_ptr) {
 }
 
 
-void* load_model(const char *fname) {
+void* load_model(const char *fname, int version) {
     app_params params;
+    model_info minfo;
     params.model = fname;
+
+    if (version == 2) {
+        params.mtype = "chatglm2";
+        minfo.etoken = 2;
+    }
 
     if (params.seed < 0) {
         params.seed = time(NULL);
@@ -170,10 +189,11 @@ void* load_model(const char *fname) {
         model->load(params.model);
         model->init(
                 params.top_k, params.top_p, params.temp, params.repeat_penalty,
-                params.repeat_last_n, params.seed, 130005);
+                params.repeat_last_n, params.seed, 2);
         res = model.get();
         // save
-        model_map.insert(std::pair<void*, std::shared_ptr<inferllm::Model>>(res, model));
+        minfo.model = model;
+        model_map.insert(std::pair<void*, model_info>(res, minfo));
     } catch (std::runtime_error& e) {
         fprintf(stderr, "failed %s",e.what());
         return res;

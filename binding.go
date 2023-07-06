@@ -15,9 +15,9 @@ type InferLLM struct {
 	state unsafe.Pointer
 }
 
-func New(model string) (*InferLLM, error) {
+func New(model string, version int) (*InferLLM, error) {
 	modelPath := C.CString(model)
-	result := C.load_model(modelPath)
+	result := C.load_model(modelPath, C.int(version))
 	if result == nil {
 		return nil, fmt.Errorf("failed loading model")
 	}

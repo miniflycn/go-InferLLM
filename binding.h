@@ -5,7 +5,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-void* load_model(const char *fname);
+void* load_model(const char *fname, int version);
 void llm_binding_free_model(void *state_ptr);
 char *ask_sync(void *state_ptr, const char *user_input);
 char *ask(void *state_ptr, const char *user_input);

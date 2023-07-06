@@ -8,13 +8,13 @@ import (
 )
 
 func main() {
-	l, err := InferLLM.New("../InferLLM-Model/chatglm-q4.bin")
+	l, err := InferLLM.New("../InferLLM-Model/chatglm2-q4.bin", 2)
 	if err != nil {
 		fmt.Println("Loading the model failed:", err.Error())
 		os.Exit(1)
 	}
 	// 问一个问题，并获取回答
-	p := l.Ask("怎么提高睡眠?")
+	p := l.Ask("怎么提升睡眠质量?")
 	print(p)
 	for {
 		// 如果回答没有结束继续获取
